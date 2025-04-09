@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        *{
+            margin: 0;
+            padding: 0;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas" width="600" height="600"></canvas>
+    
+</body>
+<script>
+    const gameScene = document.getElementById('canvas');
+    const ctx = canvas.getContext("2d");
+    const size = 40;
+    const coordinates = {
+        x: 50,
+        y: 50,
+    };
+    const speed = {
+        x: 2,
+        y: 2,
+    };
+
+    function start() {
+        gameScene.style.backgroundColor = 'black';
+        
+        gameScene.width = window.innerWidth;
+        gameScene.height = window.innerHeight;
+    }
+    start();
+
+    // The proper game loop
+    window.requestAnimationFrame(gameLoop);
+
+    function gameLoop() {
+        draw();
+        window.requestAnimationFrame(gameLoop);
+    }
+
+    function draw() {
+        
+        ctx.clearRect(0, 0, gameScene.width, gameScene.height);
+
+        ctx.beginPath();
+        ctx.arc(coordinates.x,coordinates.y, size, 0, 2 * Math.PI);
+        ctx.fillStyle = "red";
+        ctx.fill();
+        
+        if (coordinates.x > gameScene.width-size) {
+            speed.x = -2;
+        }
+        if (coordinates.y > gameScene.height-size) {
+            speed.y = -2;
+        }
+        if (coordinates.x < size) {
+            speed.x = 2;
+        }
+        if (coordinates.y < size) {
+            speed.y = 2;
+        }
+        coordinates.x+=speed.x;
+        coordinates.y+=speed.y;
+        console.log('draw');
+    }
+</script>
+</html>
