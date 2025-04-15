@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Space Wrecker</title>
+    <style>
+        canvas {
+            border: 2px solid white;
+            background: black;
+        }
+        body {
+            background: #111;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+        #gameOver {
+            position: absolute;
+            color: red;
+            font-size: 50px;
+            font-family: Arial, sans-serif;
+            display: none;
+        }
+        #score {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 20px;
+            font-family: Arial, sans-serif;
+        }
+        #lives {
+            position: absolute;
+            top: 40px;
+            left: 10px;
+            color: white;
+            font-size: 20px;
+            font-family: Arial, sans-serif;
+        }
+        #levelMessage {
+            position: absolute;
+            top: 70px;
+            left: 10px;
+            color: yellow;
+            font-size: 20px;
+            font-family: Arial, sans-serif;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="score">Score: 0</div>
+    <div id="lives">Lives: 3</div>
+    <div id="levelMessage">Level 2: Enemies are faster!</div>
+    <div id="gameOver">Game Over!</div>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreDisplay = document.getElementById('score');
+        const livesDisplay = document.getElementById('lives');
+        const gameOverDisplay = document.getElementById('gameOver');
+        const levelMessageDisplay = document.getElementById('levelMessage');
+
+        // Player
+        const player = {
+            x: canvas.width / 2,
+            y: canvas.height - 50,
+            width: 40,
+            height: 40,
+            speed: 5,
+            lives: 3,
+            score: 0
+        };
+
+        // Lasers
+        const lasers = [];
+        const laserSpeed = 7;
+
+        // Enemies
+        const enemies = [];
+        let enemySpeed = 2; // Initial speed
+        let enemySpawnRate = 50; // Initial spawn rate
+
+        // Bonuses
+        const bonuses = [];
+        const bonusSpeed = 3;
+
+        // Level tracking
+        let level = 1;
+        let levelMessageTimer = 0;
+
+        // Controls
+        let keys = { left: false, right: false, up: false, down: false, space: false };
+        let gameOver = false;
+        let frameCount = 0;
+
+        // Key listeners
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') keys.left = true;
+            if (e.key === 'ArrowRight') keys.right = true;
+            if (e.key === 'ArrowUp') keys.up = true;
+            if (e.key === 'ArrowDown') keys.down = true;
+            if (e.key === ' ') keys.space = true;
+            if (e.key === 'r' && gameOver) resetGame();
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowLeft') keys.left = false;
+            if (e.key === 'ArrowRight') keys.right = false;
+            if (e.key === 'ArrowUp') keys.up = false;
+            if (e.key === 'ArrowDown') keys.down = false;
+            if (e.key === ' ') keys.space = false;
+        });
+
+        // Spawn enemies
+        function spawnEnemy() {
+            enemies.push({
+                x: Math.random() * (canvas.width - 30),
+                y: -30,
+                width: 30,
+                height: 30,
+                speed: enemySpeed
+            });
+        }
+
+        // Spawn bonuses
+        function spawnBonus() {
+            bonuses.push({
+                x: Math.random() * (canvas.width - 20),
+                y: -20,
+                width: 20,
+                height: 20,
+                speed: bonusSpeed
+            });
+        }
+
+        // Reset game
+        function resetGame() {
+            player.lives = 3;
+            player.score = 0;
+            player.x = canvas.width / 2;
+            player.y = canvas.height - 50;
+            enemies.length = 0;
+            lasers.length = 0;
+            bonuses.length = 0;
+            gameOver = false;
+            level = 1;
+            enemySpeed = 2;
+            enemySpawnRate = 50;
+            gameOverDisplay.style.display = 'none';
+            levelMessageDisplay.style.display = 'none';
+            scoreDisplay.textContent = `Score: 0`;
+            livesDisplay.textContent = `Lives: 3`;
+        }
+
+        // Update game state
+        function update() {
+            if (gameOver) return;
+
+            // Player movement
+            if (keys.left && player.x > 0) player.x -= player.speed;
+            if (keys.right && player.x < canvas.width - player.width) player.x += player.speed;
+            if (keys.up && player.y > 0) player.y -= player.speed;
+            if (keys.down && player.y < canvas.height - player.height) player.y += player.speed;
+
+            // Shooting
+            if (keys.space) {
+                lasers.push({
+                    x: player.x + player.width / 2 - 2,
+                    y: player.y,
+                    width: 4,
+                    height: 10
+                });
+                keys.space = false;
+            }
+
+            // Move lasers
+            for (let i = lasers.length - 1; i >= 0; i--) {
+                const laser = lasers[i];
+                laser.y -= laserSpeed;
+                if (laser.y < 0) lasers.splice(i, 1);
+            }
+
+            // Level progression
+            if (player.score >= 100 && level === 1) {
+                level = 2;
+                enemySpeed = 4; // Enemies move faster
+                enemySpawnRate = 30; // Enemies spawn more frequently
+                levelMessageDisplay.style.display = 'block';
+                levelMessageTimer = 180; // Show message for 3 seconds (180 frames at 60 FPS)
+            }
+
+            // Hide level message after timer
+            if (levelMessageTimer > 0) {
+                levelMessageTimer--;
+                if (levelMessageTimer <= 0) {
+                    levelMessageDisplay.style.display = 'none';
+                }
+            }
+
+            // Spawn enemies and bonuses
+            frameCount++;
+            if (frameCount % enemySpawnRate === 0) spawnEnemy();
+            if (frameCount % 200 === 0) spawnBonus();
+
+            // Move enemies and check collisions
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const enemy = enemies[i];
+                enemy.y += enemy.speed;
+                if (enemy.y > canvas.height) {
+                    enemies.splice(i, 1);
+                    continue;
+                }
+
+                // Collision with player
+                if (
+                    player.x < enemy.x + enemy.width &&
+                    player.x + player.width > enemy.x &&
+                    player.y < enemy.y + enemy.height &&
+                    player.y + player.height > enemy.y
+                ) {
+                    enemies.splice(i, 1);
+                    player.lives--;
+                    livesDisplay.textContent = `Lives: ${player.lives}`;
+                    if (player.lives <= 0) {
+                        gameOver = true;
+                        gameOverDisplay.style.display = 'block';
+                    }
+                    continue;
+                }
+
+                // Collision with laser
+                for (let j = lasers.length - 1; j >= 0; j--) {
+                    const laser = lasers[j];
+                    if (
+                        laser.x < enemy.x + enemy.width &&
+                        laser.x + laser.width > enemy.x &&
+                        laser.y < enemy.y + enemy.height &&
+                        laser.y + laser.height > enemy.y
+                    ) {
+                        enemies.splice(i, 1);
+                        lasers.splice(j, 1);
+                        player.score += 10;
+                        scoreDisplay.textContent = `Score: ${player.score}`;
+                        break;
+                    }
+                }
+            }
+
+            // Move bonuses and check collection
+            for (let i = bonuses.length - 1; i >= 0; i--) {
+                const bonus = bonuses[i];
+                bonus.y += bonus.speed;
+                if (bonus.y > canvas.height) {
+                    bonuses.splice(i, 1);
+                    continue;
+                }
+
+                // Collect bonus
+                if (
+                    player.x < bonus.x + bonus.width &&
+                    player.x + player.width > bonus.x &&
+                    player.y < bonus.y + bonus.height &&
+                    player.y + player.height > bonus.y
+                ) {
+                    bonuses.splice(i, 1);
+                    if (player.lives < 3) player.lives++;
+                    livesDisplay.textContent = `Lives: ${player.lives}`;
+                }
+            }
+        }
+
+        // Draw everything
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Player (ship)
+            ctx.fillStyle = 'cyan';
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+            ctx.fillStyle = 'white';
+            ctx.fillRect(player.x + player.width / 2 - 2, player.y - 10, 4, 10);
+
+            // Lasers
+            ctx.fillStyle = 'red';
+            lasers.forEach(laser => {
+                ctx.fillRect(laser.x, laser.y, laser.width, laser.height);
+            });
+
+            // Enemies
+            ctx.fillStyle = 'purple';
+            enemies.forEach(enemy => {
+                ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+            });
+
+            // Bonuses
+            ctx.fillStyle = 'yellow';
+            bonuses.forEach(bonus => {
+                ctx.fillRect(bonus.x, bonus.y, bonus.width, bonus.height);
+            });
+        }
+
+        // Game loop
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
+    </script>
+</body>
+</html>
